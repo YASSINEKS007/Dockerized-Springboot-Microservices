@@ -1,0 +1,96 @@
+services:
+  my-discovery-service:
+    build: ./discovery-service
+    container_name: my-discovery-service
+    environment:
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761
+    ports:
+      - '8761:8761'
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8761/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - my-network
+
+  my-config-service:
+    build: ./config-service
+    container_name: my-config-service
+    ports:
+      - '8888:8888'
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8888/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - my-network
+
+  my-gateway-service:
+    build: ./gateway-service
+    container_name: my-gateway-service
+    ports:
+      - '8090:8090'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka/
+      - CONFIG_SERVICE_URL=http://my-config-service:8888
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8090/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      my-config-service:
+        condition: service_healthy
+      my-discovery-service:
+        condition: service_healthy
+    networks:
+      - my-network
+
+  my-customer-service:
+    build: ./customer-service
+    container_name: my-customer-service
+    ports:
+      - '8091:8091'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka/
+      - CONFIG_SERVICE_URL=http://my-config-service:8888
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8091/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      my-config-service:
+          condition: service_healthy
+      my-discovery-service:
+        condition: service_healthy
+    networks:
+      - my-network
+
+  my-inventory-service:
+    build: ./inventory-service
+    container_name: my-inventory-service
+    ports:
+      - '8092:8092'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka/
+      - CONFIG_SERVICE_URL=http://my-config-service:8888
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8092/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      my-discovery-service:
+        condition: service_healthy
+      my-config-service:
+        condition: service_healthy
+    networks:
+      - my-network
+
+
+networks:
+  my-network:
+    driver: bridge
